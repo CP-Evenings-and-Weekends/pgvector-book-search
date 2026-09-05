@@ -8,7 +8,7 @@ The repo ships a `docker-compose.yml` for a pgvector-enabled Postgres + a `.env.
 
 ```bash
 cp .env.example .env
-# Put your AI_API_KEY in .env (Ollama works too, see below)
+# Put your LLM_API_KEY in .env (Ollama works too, see below)
 docker compose up -d
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
@@ -91,8 +91,8 @@ ollama pull nomic-embed-text
 Then in your `.env`:
 
 ```
-AI_API_BASE_URL=http://localhost:11434
-AI_API_KEY=unused
+LLM_API_URL=http://localhost:11434
+LLM_API_KEY=unused
 EMBEDDING_MODEL=nomic-embed-text
 ```
 
