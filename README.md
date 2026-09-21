@@ -91,7 +91,7 @@ ollama pull nomic-embed-text
 Then in your `.env`:
 
 ```
-LLM_API_URL=http://localhost:11434
+LLM_API_BASE_URL=http://localhost:11434
 LLM_API_KEY=unused
 EMBEDDING_MODEL=nomic-embed-text
 ```
