@@ -2,9 +2,27 @@
 
 Apply today's [Embeddings + pgvector lesson](https://github.com/CP-Evenings-and-Weekends/curriculum/blob/main/Module_06_AI_LLMs/week17/day1/README.md) to a book search problem, then prove to yourself that semantic search actually beats keyword search.
 
-The repo ships a `docker-compose.yml` for a pgvector-enabled Postgres + a `.env.example` so you don't have to retype any of that — you focus on the Django side.
+The default plan is to build tonight's work **inside the practice project you made in class**, so there is no new scaffolding, no new container, and no new `.env` on a Monday night. This repo also ships a `docker-compose.yml`, `requirements.txt`, and `.env.example` as a fallback if your class environment never got working.
 
-## Setup
+## Setup (default path: extend your class project)
+
+In the `vector_demo` project from class, with its Docker container still running:
+
+```bash
+python manage.py startapp books
+```
+
+Then wire it up with the same pattern from the lesson:
+
+1. Add `"books"` to `INSTALLED_APPS`
+2. Build a `Book` model with `title`, `author`, `description` (TextField), and `embedding = VectorField(dimensions=1536, null=True, blank=True)` — use `768` if your class project is on the Ollama path, matching what you already migrated
+3. Run `python manage.py makemigrations books && python manage.py migrate` (no migration edit needed this time: your class project's first migration already enabled the pgvector extension)
+4. Wire `path("api/", include("books.urls"))` in your project `urls.py`
+5. Reuse the `generate_embedding` helper from class — import it from `search.embeddings`, or copy the file into `books/`
+
+## Setup (fallback path: fresh scaffold)
+
+Only if your class environment broke and you cannot fix it quickly:
 
 ```bash
 cp .env.example .env
@@ -12,22 +30,11 @@ cp .env.example .env
 docker compose up -d
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-```
-
-Then scaffold a Django project + app (don't import this from class — start fresh):
-
-```bash
 django-admin startproject book_search .
 python manage.py startapp books
 ```
 
-Wire it up with the same pattern from the lesson:
-
-1. Add `"books"` to `INSTALLED_APPS`
-2. Update `DATABASES` to point at the pgvector container
-3. Build a `Book` model with `title`, `author`, `description` (TextField), and `embedding = VectorField(dimensions=1536, null=True, blank=True)`
-4. Generate the initial migration — make sure it includes `VectorExtension()` at the top of `operations`
-5. Wire `path("api/", include("books.urls"))` in your project `urls.py`
+On this path, also update `DATABASES` to point at the pgvector container, and make sure the initial migration includes `VectorExtension()` at the top of `operations`, exactly as in the lesson.
 
 If you'd rather use Ollama for embeddings (free, no API key), see the bottom of this README.
 
@@ -82,7 +89,9 @@ Good queries to try (none of these are likely to appear literally in your descri
 
 ## Using Ollama for embeddings (no API key)
 
-If you don't want to pay or sign up for an API:
+If you extended your class project, this decision is already made: keep the provider and dimension count your project already uses (768 for the Ollama path), and you are done here.
+
+On the fresh-scaffold path, if you don't want to pay or sign up for an API:
 
 ```bash
 ollama pull nomic-embed-text
@@ -96,7 +105,7 @@ LLM_API_KEY=unused
 EMBEDDING_MODEL=nomic-embed-text
 ```
 
-`nomic-embed-text` produces **768-dim** vectors, not 1536, so adjust the `VectorField(dimensions=768, ...)` on the `Book` model.  You'll need to nuke your DB volume (`docker compose down -v`) and re-migrate.
+`nomic-embed-text` produces **768-dim** vectors, not 1536, so adjust the `VectorField(dimensions=768, ...)` on the `Book` model.  If you already migrated at 1536, nuke your DB volume (`docker compose down -v`) and re-migrate.
 
 ## Things to think about
 - Why is the embedding stored once on insert and not recomputed on every search?  What would it cost if you regenerated it every request?
