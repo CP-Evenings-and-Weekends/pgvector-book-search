@@ -15,7 +15,7 @@ python manage.py startapp books
 Then wire it up with the same pattern from the lesson:
 
 1. Add `"books"` to `INSTALLED_APPS`
-2. Build a `Book` model with `title`, `author`, `description` (TextField), and `embedding = VectorField(dimensions=1536, null=True, blank=True)` — use `768` if your class project is on the Ollama path, matching what you already migrated
+2. Build a `Book` model with `title`, `author`, `description` (TextField), and `embedding = VectorField(dimensions=768, null=True, blank=True)` — 768 matches the class Ollama stack you already migrated; use `1536` only if your class project is on the paid OpenAI path
 3. Run `python manage.py makemigrations books && python manage.py migrate` (no migration edit needed this time: your class project's first migration already enabled the pgvector extension)
 4. Wire `path("api/", include("books.urls"))` in your project `urls.py`
 5. Reuse the `generate_embedding` helper from class — import it from `search.embeddings`, or copy the file into `books/`
@@ -26,7 +26,7 @@ Only if your class environment broke and you cannot fix it quickly:
 
 ```bash
 cp .env.example .env
-# Put your LLM_API_KEY in .env (Ollama works too, see below)
+# Defaults work as-is on the class Ollama stack (OpenAI users put a key here, see below)
 docker compose up -d
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
@@ -36,7 +36,7 @@ python manage.py startapp books
 
 On this path, also update `DATABASES` to point at the pgvector container, and make sure the initial migration includes `VectorExtension()` at the top of `operations`, exactly as in the lesson.
 
-If you'd rather use Ollama for embeddings (free, no API key), see the bottom of this README.
+If you'd rather use OpenAI for embeddings (paid, optional), see the bottom of this README.
 
 ## Assignment 1 — Book semantic search
 
@@ -87,25 +87,19 @@ Create a `comparison.md` in your repo with **at least 3 cases** where semantic s
 
 Good queries to try (none of these are likely to appear literally in your descriptions): *"book about WWII"*, *"page-turner for the beach"*, *"how to be productive"*, *"AI takeover"*.
 
-## Using Ollama for embeddings (no API key)
+## Using OpenAI for embeddings (paid, optional)
 
-If you extended your class project, this decision is already made: keep the provider and dimension count your project already uses (768 for the Ollama path), and you are done here.
+If you extended your class project, this decision is already made: keep the provider and dimension count your project already uses (768 on the class Ollama stack), and you are done here.
 
-On the fresh-scaffold path, if you don't want to pay or sign up for an API:
-
-```bash
-ollama pull nomic-embed-text
-```
-
-Then in your `.env`:
+On the fresh-scaffold path, if you would rather use OpenAI (requires an API key with prepaid credits), set your `.env` to:
 
 ```
-LLM_API_BASE_URL=http://localhost:11434
-LLM_API_KEY=unused
-EMBEDDING_MODEL=nomic-embed-text
+LLM_API_BASE_URL=https://api.openai.com
+LLM_API_KEY=sk-your-key-here
+EMBEDDING_MODEL=text-embedding-3-small
 ```
 
-`nomic-embed-text` produces **768-dim** vectors, not 1536, so adjust the `VectorField(dimensions=768, ...)` on the `Book` model.  If you already migrated at 1536, nuke your DB volume (`docker compose down -v`) and re-migrate.
+`text-embedding-3-small` produces **1536-dim** vectors, not 768, so adjust to `VectorField(dimensions=1536, ...)` on the `Book` model.  If you already migrated at 768, nuke your DB volume (`docker compose down -v`) and re-migrate.
 
 ## Things to think about
 - Why is the embedding stored once on insert and not recomputed on every search?  What would it cost if you regenerated it every request?
@@ -117,6 +111,6 @@ EMBEDDING_MODEL=nomic-embed-text
 - Add an HNSW index on the `embedding` column.  Measure search time before vs after with `EXPLAIN ANALYZE`.
 - Allow `?k=10` to control the result count.
 - Add a `genre` field and a hybrid endpoint: filter by genre via SQL first, then semantic-search within the filtered set.
-- Switch from `text-embedding-3-small` (1536d) to `text-embedding-3-large` (3072d) and compare quality on the same queries.  Worth the cost?
+- On the paid OpenAI path: switch from `text-embedding-3-small` (1536d) to `text-embedding-3-large` (3072d) and compare quality on the same queries.  Worth the cost?
 
 > Stuck? Have a code error? Use the ["4 Before Me"](https://docs.google.com/document/d/1nseOs5oabYBKNHfwJZNAR7GlU0zkZxNagsw63AD7XV0/edit) debugging checklist to help you solve it!
