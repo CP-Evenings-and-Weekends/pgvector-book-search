@@ -1,11 +1,11 @@
 import os
 import django
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'book_search.settings')
+django.setup()
+
 from books.models import Book
 from books.embeddings import generate_embedding
-
-os.environ.setdefault('book_search.wsgi.application', 'book_search.urls')
-
-django.setup()
 
 books = [
     {

@@ -1,34 +1,34 @@
-from django.shortcuts import render
 from rest_framework import serializers, status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import Document
+from django.db.models import Q
+from .models import Book
 from .embeddings import generate_embedding
 from pgvector.django import CosineDistance
 
 
-class DocumentSerializer(serializers.ModelSerializer):
+class BookSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Document
+        model = Book
         fields = ["id", "title", "author", "description"]
 
 
-@api_view(["POST"])
-def create_document(request):
-    serializer = DocumentSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
+@api_view(["GET", "POST"])
+def books_collection(request):
+    if request.method == "POST":
+        serializer = BookSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        book = serializer.save()
+        book.embedding = generate_embedding(book.description)
+        book.save(update_fields=["embedding"])
+        return Response(BookSerializer(book).data, status=status.HTTP_201_CREATED)
 
-    doc = serializer.save()
-
-    # Generate and store the embedding
-    doc.embedding = generate_embedding(doc.content)
-    doc.save(update_fields=["embedding"])
-
-    return Response(DocumentSerializer(doc).data, status=status.HTTP_201_CREATED)
+    books = Book.objects.all()
+    return Response(BookSerializer(books, many=True).data)
 
 
 @api_view(["GET"])
-def search_documents(request):
+def search_books(request):
     query = request.query_params.get("q", "")
     if not query:
         return Response(
@@ -36,23 +36,37 @@ def search_documents(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    # Generate embedding for the search query
     query_embedding = generate_embedding(query)
 
-    # Find the most similar documents
     results = (
-        Document.objects.annotate(distance=CosineDistance("embedding", query_embedding))
-        .order_by("distance")[:5]
+        Book.objects.annotate(distance=CosineDistance("embedding", query_embedding))
+        .order_by("distance")[:3]
     )
 
     data = [
         {
-            "id": doc.id,
-            "title": doc.title,
-            "author": doc.author,
-            "description": doc.description,
+            "id": book.id,
+            "title": book.title,
+            "author": book.author,
+            "distance": float(book.distance),
         }
-        for doc in results
+        for book in results
     ]
 
     return Response(data)
+
+
+@api_view(["GET"])
+def keyword_search_books(request):
+    query = request.query_params.get("q", "")
+    if not query:
+        return Response(
+            {"error": "Query parameter 'q' is required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    results = Book.objects.filter(
+        Q(title__icontains=query) | Q(description__icontains=query)
+    )[:3]
+
+    return Response(BookSerializer(results, many=True).data)

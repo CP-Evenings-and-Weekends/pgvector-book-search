@@ -1,0 +1,42 @@
+=== ENDPOINTS ===
+
+1. Create a book (POST /api/books/) — generates and stores the embedding
+
+curl -s -X POST http://localhost:8000/api/books/ \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Foundation", "author": "Isaac Asimov", "description": "A mathematician predicts the fall of a galactic empire and establishes a plan spanning centuries to preserve civilization."}' \
+  | jq
+
+Expected: 201 Created with the new book's id, title, author, description
+
+----------------------------
+
+2. List all books (GET /api/books/)
+
+curl -s http://localhost:8000/api/books/ | jq
+
+Expected: a JSON array of all books
+
+----------------------------
+
+3. Semantic search (GET /api/books/search/?q=...)
+
+curl -s "http://localhost:8000/api/books/search/?q=interstellar+adventure" | jq
+
+Expected: top 3 results, each with id, title, author, distance — sorted ascending by distance (lower = more similar)
+
+----------------------------
+
+4. Keyword search (GET /api/books/keyword-search/?q=...) — the ILIKE comparison endpoint
+
+curl -s "http://localhost:8000/api/books/keyword-search/?q=magic" | jq
+
+Expected: up to 3 books where title or description contains the literal substring "magic" (case-insensitive)
+
+----------------------------
+
+5. Missing query param
+
+curl -s "http://localhost:8000/api/books/search/" | jq
+
+Expected: 400 Bad Request with {"error": "Query parameter 'q' is required"} (per the lesson's search_documents pattern

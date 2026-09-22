@@ -54,9 +54,13 @@ TEMPLATES = [
 WSGI_APPLICATION = 'book_search.wsgi.application'
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "book_search",
+        "USER": "postgres",
+        "PASSWORD": "postgres",
+        "HOST": os.getenv("DB_HOST", "db"),
+        "PORT": "5432",
     }
 }
 
@@ -91,25 +95,8 @@ MAILERS = {
     },
 }
 
-LLM_API_BASE_URL = os.getenv("LLM_API_BASE_URL", "http://localhost:11434")
+LLM_API_BASE_URL = os.getenv("LLM_API_BASE_URL", "http://host.docker.internal:11434")
 
 LLM_API_KEY = os.getenv("LLM_API_KEY", "")
 
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
-
-response = requests.post(
-    f"{LLM_API_BASE_URL}/v1/embeddings",
-    headers={
-        "Authorization": f"Bearer {LLM_API_KEY}",
-        "Content-Type": "application/json",
-    },
-    json={
-        "model": EMBEDDING_MODEL,
-        "input": "Django is a Python web framework"
-    },
-    timeout=30,
-)
-
-data = response.json()
-
-embedding = data["data"][0]["embedding"]
